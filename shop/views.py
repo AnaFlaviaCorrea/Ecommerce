@@ -4,6 +4,7 @@ from rest_framework.decorators import api_view, action
 from rest_framework.response import Response  
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
+from .paypal import create_paypal_payment
 
 @api_view(['GET'])
 
@@ -66,3 +67,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         payment_method = PaymentMethod.objects.get(pk=self.request.data.get('payment_method_id'))
         serializer.save(user=self.request.user, cart=cart, payment_method=payment_method)
         return super().perform_create(serializer)
+    
+    @action(detail=True, methods=['post'])
+    def create_paypal_payment(self, request, pk=None):
+        cart = Cart.objects.get(pk=pk)
+        payment_url = create_paypal_payment(cart)
+        if payment_url:
+            return Response({'payment_url': payment_url}, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'payment creation failed'}, status=status.HTTP_400_BAD_REQUEST)
